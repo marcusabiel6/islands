@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>islands (multiplayer soon!!)</title>
+<title>islands</title>
 <style>
   body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin-top: 20px; }
   table { border-collapse: collapse; }
@@ -13,20 +13,20 @@
     font-size: 24px;
     cursor: pointer;
   }
-  td.Red { background-color: lightcoral; }
-  td.Blue { background-color: lightblue; }
+  td.red { background-color: lightcoral; }
+  td.blue { background-color: lightblue; }
 </style>
 </head>
 <body>
-<h1>Islands</h1>
+<h1>islands</h1>
 <table id="board"></table>
-<p id="status">current Player: red | leaps - red: 0, blue: 0</p>
+<p id="status">current player: red | leaps - red: 0, blue: 0 | red islands: 0 | blue islands: 0</p>
 
 <script>
 const size = 6;
 let board = Array(size).fill(null).map(() => Array(size).fill(''));
-let currentPlayer = 'Red';
-let leaps = { Red: 0, Blue: 0 };
+let currentPlayer = 'red';
+let leaps = { red: 0, blue: 0 };
 
 const table = document.getElementById('board');
 
@@ -41,13 +41,26 @@ function createBoard() {
       cell.textContent = '';
     }
   }
+  updateStatus();
+}
+
+function countIslands(player) {
+  return board.flat().filter(c => c === player).length;
 }
 
 function isValidMove(i,j) {
   if (board[i][j] === currentPlayer) return false;
-  if (leaps[currentPlayer] > 0) return true; // using leap
+
+  // Leap: only if you have a leap and target is enemy square or empty anywhere
+  if (leaps[currentPlayer] > 0 && board[i][j] !== currentPlayer) return true;
+
+  // Cannot place on enemy square without leap
   if (board[i][j] !== '') return false;
-  if (!board.flat().some(x => x === currentPlayer)) return true; // first move anywhere
+
+  // First move: anywhere
+  if (!board.flat().some(x => x === currentPlayer)) return true;
+
+  // Must be adjacent to your existing squares
   const dirs = [[0,1],[1,0],[0,-1],[-1,0]];
   return dirs.some(([di,dj]) => {
     let ni = i + di, nj = j + dj;
@@ -58,22 +71,23 @@ function isValidMove(i,j) {
 function makeMove(i,j) {
   if (!isValidMove(i,j)) return;
 
-  if (board[i][j] !== '') leaps[currentPlayer]--; // using leap
+  if (board[i][j] !== '' && board[i][j] !== currentPlayer) leaps[currentPlayer]--;
+
   board[i][j] = currentPlayer;
 
-  const count = board.flat().filter(c => c === currentPlayer).length;
-  if (count >= 10 && leaps[currentPlayer] === 0) leaps[currentPlayer] = 1;
+  if (countIslands(currentPlayer) >= 10 && leaps[currentPlayer] === 0) leaps[currentPlayer] = 1;
 
-  currentPlayer = currentPlayer === 'Red' ? 'Blue' : 'Red';
+  currentPlayer = currentPlayer === 'red' ? 'blue' : 'red';
 
-  updateStatus();
   createBoard();
   checkEndGame();
 }
 
 function updateStatus() {
+  const redCount = countIslands('red');
+  const blueCount = countIslands('blue');
   document.getElementById('status').textContent = 
-    `current player: ${currentPlayer} | leaps - red: ${leaps.red}, blue: ${leaps.blue}`;
+    `current player: ${currentPlayer} | leaps - red: ${leaps.red}, blue: ${leaps.blue} | red islands: ${redCount} | blue islands: ${blueCount}`;
 }
 
 function checkEndGame() {
@@ -82,17 +96,15 @@ function checkEndGame() {
     return isValidMove(i,j);
   });
   if (!movesLeft) {
-    const countRed = board.flat().filter(c => c === 'Red').length;
-    const countBlue = board.flat().filter(c => c === 'Blue').length;
+    const redCount = countIslands('red');
+    const blueCount = countIslands('blue');
     document.getElementById('status').textContent =
-      countRed === countBlue ? 
-      `tie! Red: ${countRed}, blue: ${countBlue}` :
-      `winner: ${countRed > countBlue ? 'red' : 'blue'} (red: ${countRed}, blue: ${countBlue})`;
+      redCount === blueCount ? 
+      `tie! red: ${redCount}, blue: ${blueCount}` :
+      `winner: ${redCount > blueCount ? 'red' : 'blue'} (red: ${redCount}, blue: ${blueCount})`;
   }
 }
-
 createBoard();
-updateStatus();
 </script>
 </body>
 </html>
