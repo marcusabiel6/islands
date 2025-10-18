@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>islands (multiplayer soon!!)</title>
+<style>
+  body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin-top: 20px; }
+  table { border-collapse: collapse; }
+  td {
+    width: 60px; height: 60px;
+    border: 1px solid black;
+    text-align: center;
+    font-size: 24px;
+    cursor: pointer;
+  }
+  td.Red { background-color: lightcoral; }
+  td.Blue { background-color: lightblue; }
+</style>
+</head>
+<body>
+<h1>Islands</h1>
+<table id="board"></table>
+<p id="status">current Player: red | leaps - red: 0, blue: 0</p>
+
+<script>
+const size = 6;
+let board = Array(size).fill(null).map(() => Array(size).fill(''));
+let currentPlayer = 'Red';
+let leaps = { Red: 0, Blue: 0 };
+
+const table = document.getElementById('board');
+
+function createBoard() {
+  table.innerHTML = '';
+  for (let i = 0; i < size; i++) {
+    let row = table.insertRow();
+    for (let j = 0; j < size; j++) {
+      let cell = row.insertCell();
+      cell.className = board[i][j];
+      cell.addEventListener('click', () => makeMove(i,j));
+      cell.textContent = '';
+    }
+  }
+}
+
+function isValidMove(i,j) {
+  if (board[i][j] === currentPlayer) return false;
+  if (leaps[currentPlayer] > 0) return true; // using leap
+  if (board[i][j] !== '') return false;
+  if (!board.flat().some(x => x === currentPlayer)) return true; // first move anywhere
+  const dirs = [[0,1],[1,0],[0,-1],[-1,0]];
+  return dirs.some(([di,dj]) => {
+    let ni = i + di, nj = j + dj;
+    return ni >=0 && ni<size && nj>=0 && nj<size && board[ni][nj] === currentPlayer;
+  });
+}
+
+function makeMove(i,j) {
+  if (!isValidMove(i,j)) return;
+
+  if (board[i][j] !== '') leaps[currentPlayer]--; // using leap
+  board[i][j] = currentPlayer;
+
+  const count = board.flat().filter(c => c === currentPlayer).length;
+  if (count >= 10 && leaps[currentPlayer] === 0) leaps[currentPlayer] = 1;
+
+  currentPlayer = currentPlayer === 'Red' ? 'Blue' : 'Red';
+
+  updateStatus();
+  createBoard();
+  checkEndGame();
+}
+
+function updateStatus() {
+  document.getElementById('status').textContent = 
+    `current player: ${currentPlayer} | leaps - red: ${leaps.red}, blue: ${leaps.blue}`;
+}
+
+function checkEndGame() {
+  const movesLeft = board.flat().some((cell, idx) => {
+    let i = Math.floor(idx/size), j = idx%size;
+    return isValidMove(i,j);
+  });
+  if (!movesLeft) {
+    const countRed = board.flat().filter(c => c === 'Red').length;
+    const countBlue = board.flat().filter(c => c === 'Blue').length;
+    document.getElementById('status').textContent =
+      countRed === countBlue ? 
+      `tie! Red: ${countRed}, blue: ${countBlue}` :
+      `winner: ${countRed > countBlue ? 'red' : 'blue'} (red: ${countRed}, blue: ${countBlue})`;
+  }
+}
+
+createBoard();
+updateStatus();
+</script>
+</body>
+</html>
